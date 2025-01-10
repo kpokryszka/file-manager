@@ -1,0 +1,27 @@
+# Node modules
+node_modules/
+package-lock.json
+
+# Environment files
+.env
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.swp
+*.bak
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Built files
+dist/
+build/
+
+# Directory with ftp files
+ftp-root/*
+uploads/*

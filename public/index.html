@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>File Manager</title>
+	<link rel="stylesheet" href="style.css">
+</head>
+<body>
+	<div class="container">
+
+		<main>
+			<section class="info-section">
+				<h2>Server Details:</h2>
+				<p id="ftp-details"></p>
+			</section>
+
+			<section class="upload-section">
+				<h2>Upload File</h2>
+				<form id="upload-form">
+					<input type="file" id="file-input" name="file" required />
+					<button type="submit">Upload</button>
+				</form>
+				<div id="progress-container" style="display: none;">
+					<progress id="upload-progress" value="0" max="100" style="width: 100%;"></progress>
+				</div>
+			</section>
+
+			<section class="files-section">
+				<h2>Files on Server</h2>
+				<div>
+					<input type="text" id="search-input" placeholder="Search files..." class="search-box" />
+				</div>
+				<div class="file-list-container">
+					<ul id="file-list"></ul>
+				</div>        
+			</section>      
+		</main>
+	</div>
+
+	<!-- Notification Container -->
+	<div id="notification-container"></div>
+
+	<script src="app.js"></script>
+</body>
+</html>

@@ -76,12 +76,20 @@ document.addEventListener("DOMContentLoaded", () => {
 			const { host, user, password, port } = ftpCredentials;
 
 			ftpDetails.innerHTML = `
+			<div class="ftp-info">
 				<strong>Host:</strong> ${host}<br>
 				<strong>Port:</strong> ${port}<br>
 				<strong>Username:</strong> ${user}<br>
-				<strong>Password:</strong> ${password}<br><br>
-				<strong>URL:</strong> ftp://${user}:${password}@${host}:${port}/<br><br>
-				<button class="copy-btn right-align" data-ftp-url="ftp://${user}:${password}@${host}:${port}/">Copy FTP URL</button>
+				<strong>Password:</strong> ${password}
+			</div>
+			<div class="ftp-link-container">
+				<div class="ftp-link">
+					<a>ftp://${user}:${password}@${host}:${port}/</a>
+				</div>
+				<div class="ftp-link-button">
+					<button class="copy-btn" data-ftp-url="ftp://${user}:${password}@${host}:${port}/">Copy</button>
+				</div>
+			</div>
 			`;
 
 			const copyButton = ftpDetails.querySelector(".copy-btn");

@@ -55,16 +55,16 @@ header h1 {
 }
 
 .info-section button, .upload-section button {
-	padding: 10px 20px;
+	padding: 10px 10px;
 	border: none;
-	border-radius: 4px;
-	background-color: #007bff;
+	border-radius: 6px;
+	background-color: #28a745;
 	color: #fff;
 	cursor: pointer;
 }
 
 .info-section button:hover, .upload-section button:hover {
-	background-color: #0056b3;
+	opacity: 0.9;
 }
 
 .files-section ul {
@@ -113,7 +113,7 @@ header h1 {
 .files-section button {
 	padding: 5px 10px;
 	border: none;
-	border-radius: 4px;
+	border-radius: 6px;
 	background-color: #28a745;
 	color: #fff;
 	cursor: pointer;
@@ -134,28 +134,14 @@ header h1 {
 	width: 100%;
 	margin-bottom: 5px;
 	margin-top: 20px;
+	align-items: center;
 }
 
 .ftp-link {
 	display: block;
 	font-size: 14px;
-	color: #007bff;
 	word-wrap: break-word;
 	flex-grow: 1;
-}
-
-.copy-btn {
-	padding: 5px 10px;
-	border: none;
-	border-radius: 4px;
-	background-color: #17a2b8;
-	color: white;
-	cursor: pointer;
-	transition: background-color 0.3s;
-}
-
-.copy-btn:hover {
-	background-color: #138496;
 }
 
 .copy-btn:focus {

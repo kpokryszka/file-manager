@@ -29,7 +29,7 @@ npm start
 
 ## Screenshot
 
-![App Screenshot](https://postimg.cc/XXxPpW3P)
+![App Screenshot](https://i.postimg.cc/m2GWpZnT/Screenshot-2025-01-10-at-14-39-43.png)
 
 
 ## License

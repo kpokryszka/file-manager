@@ -3,6 +3,10 @@ document.addEventListener("DOMContentLoaded", () => {
 	const notificationContainer = document.getElementById("notification-container");
 	const uploadForm = document.getElementById("upload-form");
 	const fileInput = document.getElementById("file-input");
+	if (!fileInput) {
+		showNotification("File input element not found.", "error");
+		return;
+	}
 	const progressContainer = document.getElementById("progress-container");
 	const uploadProgress = document.getElementById("upload-progress");
 	const ftpDetails = document.getElementById("ftp-details");
@@ -20,39 +24,36 @@ document.addEventListener("DOMContentLoaded", () => {
 	async function uploadFile(file) {
 		const formData = new FormData();
 		formData.append("file", file);
-
+	
 		progressContainer.style.display = "block";
 		uploadProgress.value = 0;
-
-		try {
-			const xhr = new XMLHttpRequest();
-			xhr.open("POST", "/upload", true);
-
-			xhr.upload.onprogress = (event) => {
-				if (event.lengthComputable) {
-					const percent = (event.loaded / event.total) * 100;
-					uploadProgress.value = percent;
-				}
-			};
-
-			xhr.onload = () => {
-				if (xhr.status === 200) {
-					showNotification("File uploaded successfully!", "success");
-					fetchFiles();
-					uploadForm.reset();
-					progressContainer.style.display = "none";
-				} else {
-					showNotification("Failed to upload file.", "error");
-				}
-			};
-
-			xhr.onerror = () => showNotification("Error during file upload.", "error");
-
-			xhr.send(formData);
-		} catch (error) {
-			showNotification("Error uploading file.", "error");
-		}
+	
+		const xhr = new XMLHttpRequest();
+		xhr.open("POST", "/upload", true);
+		xhr.setRequestHeader("file-name", encodeURIComponent(file.name)); // Include file-name header
+	
+		xhr.upload.onprogress = (event) => {
+			if (event.lengthComputable) {
+				const percent = (event.loaded / event.total) * 100;
+				uploadProgress.value = percent;
+			}
+		};
+	
+		xhr.onload = () => {
+			if (xhr.status === 200) {
+				showNotification("File uploaded successfully!", "success");
+				fetchFiles();
+				uploadForm.reset();
+				progressContainer.style.display = "none";
+			} else {
+				showNotification("Failed to upload file.", "error");
+			}
+		};
+	
+		xhr.onerror = () => showNotification("Error during file upload.", "error");
+		xhr.send(formData); // Send the FormData object
 	}
+	
 
 	uploadForm.addEventListener("submit", (e) => {
 		e.preventDefault();
@@ -63,6 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			showNotification("Please select a file to upload.", "error");
 		}
 	});
+
 
 	// Fetch FTP credentials and file data from the server
 	async function fetchFiles(searchQuery = "") {
@@ -105,13 +107,13 @@ document.addEventListener("DOMContentLoaded", () => {
 			fileList.innerHTML = "";
 			files.forEach((file) => {
 				const listItem = document.createElement("li");
-				const ftpUrl = `ftp://${user}:${password}@${host}:${port}/${file.name}`;
+				const ftpUrl = `ftp://${user}:${password}@${host}:${port}/${file}`;
 
 				listItem.innerHTML = `
 					<div class="file-info">
-						<span class="file-name">${file.name}</span>
-						<button class="delete" data-filename="${file.name}">Delete</button>
-						<button class="download" data-filename="${file.name}">Download</button>
+						<span class="file-name">${file}</span>
+						<button class="delete" data-filename="${file}">Delete</button>
+						<button class="download" data-filename="${file}">Download</button>
 					</div>
 					<div class="ftp-link-container">
 						<span class="ftp-link">${ftpUrl}</span>

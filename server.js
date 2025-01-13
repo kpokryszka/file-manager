@@ -66,19 +66,19 @@ ftpServer.listen().then(() => {
 });
 
 // Configure multer to use original filenames
-const storage = multer.diskStorage({
-	destination: (req, file, cb) => {
-		const uploadDir = path.join(__dirname, "uploads");
-		if (!fs.existsSync(uploadDir)) {
-			fs.mkdirSync(uploadDir); // Create the directory if it doesn't exist
-		}
-		cb(null, uploadDir);
-	},
-	filename: (req, file, cb) => {
-		cb(null, file.originalname); // Use the original name of the file
-	},
-});
-const upload = multer({ storage });
+// const storage = multer.diskStorage({
+// 	destination: (req, file, cb) => {
+// 		const uploadDir = path.join(__dirname, "uploads");
+// 		if (!fs.existsSync(uploadDir)) {
+// 			fs.mkdirSync(uploadDir); // Create the directory if it doesn't exist
+// 		}
+// 		cb(null, uploadDir);
+// 	},
+// 	filename: (req, file, cb) => {
+// 		cb(null, file.originalname); // Use the original name of the file
+// 	},
+// });
+// const upload = multer({ storage });
 
 // FTP Client configuration
 const FTP_CONFIG = {
@@ -88,43 +88,50 @@ const FTP_CONFIG = {
 	password: FTP_PASSWORD,
 };
 
-// Upload file to FTP
-app.post("/upload", upload.single("file"), async (req, res) => {
-	const { file } = req;
+// Upload file to local filesystem
+app.post("/upload", (req, res) => {
+	const uploadDir = path.join(__dirname, "ftp-root");
 
-	if (!file) {
-		return res.status(400).send("No file provided");
+	if (!fs.existsSync(uploadDir)) {
+		fs.mkdirSync(uploadDir); // Create the directory if it doesn't exist
 	}
 
-	const client = new ftp.Client();
-	try {
-		await client.access(FTP_CONFIG);
-		await client.uploadFrom(file.path, file.originalname);
-		fs.unlinkSync(file.path); // Remove the local file after upload
+	const fileName = req.headers["file-name"];
+	if (!fileName) {
+		return res.status(400).send("Missing 'file-name' header");
+	}
+
+	const filePath = path.join(uploadDir, fileName);
+	const fileStream = fs.createWriteStream(filePath);
+
+	req.pipe(fileStream);
+
+	req.on("end", () => {
 		res.send("File uploaded successfully");
-	} catch (error) {
-		res.status(500).send("FTP upload failed: " + error.message);
-	} finally {
-		client.close();
-	}
+	});
+
+	req.on("error", (err) => {
+		console.error("Error uploading file:", err);
+		res.status(500).send("Failed to upload file: " + err.message);
+	});
 });
 
 // List files on FTP
-app.get("/files", async (req, res) => {
+app.get("/files", (req, res) => {
 	const searchQuery = req.query.search || ""; // Get the search query from the URL
-	const client = new ftp.Client();
-	try {
-		await client.access(FTP_CONFIG);
-		console.log("Successfully connected to FTP server");
+	const uploadDir = path.join(__dirname, "ftp-root");
 
-		// List files in the FTP root directory
-		const fileList = await client.list("./");
-		console.log("File list from FTP:", fileList);
+	fs.readdir(uploadDir, (err, files) => {
+		if (err) {
+			console.error("Error reading upload directory:", err);
+			return res.status(500).send("Failed to load files: " + err.message);
+		}
 
 		// Filter the files based on the search query (case-insensitive)
-		const filteredFiles = fileList.filter((file) => 
-			file.name.toLowerCase().includes(searchQuery.toLowerCase())
+		const filteredFiles = files.filter((file) =>
+			file.toLowerCase().includes(searchQuery.toLowerCase())
 		);
+		console.log("Files loaded:", filteredFiles);
 
 		res.json({
 			files: filteredFiles,
@@ -135,43 +142,32 @@ app.get("/files", async (req, res) => {
 				password: FTP_PASSWORD,
 			},
 		});
-	} catch (error) {
-		console.error("Error loading files:", error);
-		res.status(500).send("Failed to load files: " + error.message);
-	} finally {
-		client.close();
-	}
+	});
 });
 
-// Download file from FTP
-app.get("/download/:filename", async (req, res) => {
+// Download file from local directory
+app.get("/download/:filename", (req, res) => {
 	const { filename } = req.params;
-	const client = new ftp.Client();
-	const tempPath = path.join(os.tmpdir(), filename);
+	const filePath = path.join(__dirname, "ftp-root", filename);
 
-	let downloadAborted = false;
-
-	try {
-		await client.access(FTP_CONFIG);
-		console.log(`Attempting to download file: ${filename}`);
-
-		// Download file to a temporary path
-		await client.downloadTo(tempPath, filename);
+	// Check if the file exists
+	fs.access(filePath, fs.constants.F_OK, (err) => {
+		if (err) {
+			console.error("File not found:", filename);
+			return res.status(404).send("File not found");
+		}
 
 		// Handle client disconnections
+		let downloadAborted = false;
 		req.on("close", () => {
 			if (!res.writableEnded) {
 				downloadAborted = true;
 				console.log(`Download aborted by client: ${filename}`);
-				fs.unlink(tempPath, (err) => {
-					if (err) console.error("Error cleaning up aborted file:", err);
-					else console.log(`Temporary file ${filename} deleted after abort.`);
-				});
 			}
 		});
 
 		// Start the download process
-		res.download(tempPath, filename, (err) => {
+		res.download(filePath, filename, (err) => {
 			if (err) {
 				if (err.code === "EPIPE") {
 					console.warn("EPIPE: Client disconnected during download.");
@@ -183,35 +179,33 @@ app.get("/download/:filename", async (req, res) => {
 				}
 			} else if (!downloadAborted) {
 				console.log(`File successfully downloaded: ${filename}`);
-				fs.unlink(tempPath, (err) => {
-					if (err) console.error("Failed to clean up temporary file:", err);
-					else console.log(`Temporary file ${filename} deleted.`);
-				});
 			}
 		});
-	} catch (error) {
-		console.error("Error during download:", error);
-		if (!res.headersSent) {
-			res.status(500).send("Failed to download file: " + error.message);
-		}
-	} finally {
-		client.close();
-	}
+	});
 });
 
-// Delete file on FTP
-app.delete("/delete/:filename", async (req, res) => {
+// Delete file from local directory
+app.delete("/delete/:filename", (req, res) => {
 	const { filename } = req.params;
-	const client = new ftp.Client();
-	try {
-		await client.access(FTP_CONFIG);
-		await client.remove(filename);
-		res.send("File deleted successfully");
-	} catch (error) {
-		res.status(500).send("Failed to delete file: " + error.message);
-	} finally {
-		client.close();
-	}
+	const filePath = path.join(__dirname, "ftp-root", filename);
+
+	// Check if the file exists
+	fs.access(filePath, fs.constants.F_OK, (err) => {
+		if (err) {
+			console.error("File not found:", filename);
+			return res.status(404).send("File not found");
+		}
+
+		// Delete the file
+		fs.unlink(filePath, (err) => {
+			if (err) {
+				console.error("Error deleting file:", err);
+				return res.status(500).send("Failed to delete file: " + err.message);
+			}
+
+			res.send("File deleted successfully");
+		});
+	});
 });
 
 // Fallback to index.html for unmatched routes (optional for SPAs)
